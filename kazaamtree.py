@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-
-from coord import coord
+from .coord import coord
 
 class kazaamtree(list):
 	'''A 2D tree structure which quickly finds static objects approximately inside an AABB.
@@ -41,7 +39,7 @@ class kazaamtree(list):
 		self.add = addfun
 
 	def _pr(self):
-		f = self.splitx if self.splitx else (self.splity if self.splity else 0)
+		f = self.splitx if self.splitx!=None else (self.splity if self.splity!=None else 0)
 		print('%3i%s%g%s %s' % (self.depth, 'x' if self.depth&1 else 'y', f, '  '*self.depth, self))
 		if self.lo != None:
 			print('  '*self.depth, '     - lo')
@@ -58,7 +56,7 @@ class kazaamtree(list):
 
 	def _aabb(self, topleft, bottomright):
 		#print('AABB %s - %s on %i: %s/%s.' % (topleft,bottomright,self.depth,self.splitx,self.splity))
-		if self.splitx:
+		if self.splitx != None:
 			if self.splitx <= topleft.x:
 				#print('hi x')
 				return self.hi._aabb(topleft, bottomright)
@@ -67,7 +65,7 @@ class kazaamtree(list):
 				return self.lo._aabb(topleft, bottomright)
 			#print('both x')
 			return self.lo._aabb(topleft, bottomright) + self.hi._aabb(topleft, bottomright)
-		elif self.splity:
+		elif self.splity != None:
 			if self.splity <= bottomright.y:
 				#print('hi y')
 				return self.hi._aabb(topleft, bottomright)
@@ -80,6 +78,12 @@ class kazaamtree(list):
 			# Don't go through all of them, just return every coordinate in this node.
 			#print('leaf size:', len(self))
 			return self
+
+	def buckets(self):
+		return [self] if self.lo==None else self.lo.buckets() + self.hi.buckets()
+
+	def center(self, crdtype=coord):
+		return sum(self, crdtype()) * (1 / len(self))
 
 	def clear(self):
 		super(kazaamtree, self).clear()
