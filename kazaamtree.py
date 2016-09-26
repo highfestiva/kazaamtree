@@ -8,7 +8,7 @@ class kazaamtree(list):
 		self.bucket_size = bucket_size
 		self.depth = depth
 		self.splitx = self.splity = None
-		self.lo = self.hi = None
+		self.lo = self.hi = self.parent = None
 		self._set_add(self._add)
 
 	def _add(self, crd):
@@ -25,6 +25,7 @@ class kazaamtree(list):
 				self._set_add(self._add_split_y)
 			self.lo = kazaamtree(self.bucket_size, self.depth+1)
 			self.hi = kazaamtree(self.bucket_size, self.depth+1)
+			self.lo.parent = self.hi.parent = self
 			self.lo.extend(self[:l//2])
 			self.hi.extend(self[l//2:])
 			super(kazaamtree, self).clear()
@@ -82,14 +83,42 @@ class kazaamtree(list):
 	def buckets(self):
 		return [self] if self.lo==None else self.lo.buckets() + self.hi.buckets()
 
-	def center(self, crdtype=coord):
-		return sum(self, crdtype()) * (1 / len(self))
+	def center(self, crdtype=coord, weightfunc=None):
+		if not weightfunc:
+			return sum(self, crdtype()) * (1 / len(self))
+		# Weighted coordinates; calculate a weighted average.
+		wsum,avg = 0,crdtype()
+		for crd in self:
+			w = weightfunc(crd)
+			wsum += w
+			avg += crd*w
+		return avg * (1 / wsum)
+
+	def join_children(self):
+		if self.lo != None:
+			self.lo.join_children()
+			self.extend(self.lo)
+		if self.hi != None:
+			self.hi.join_children()
+			self.extend(self.hi)
+		self.splitx = self.splity = None
+		self.lo = self.hi = None
 
 	def clear(self):
 		super(kazaamtree, self).clear()
 		self.splitx = self.splity = None
 		self.lo = self.hi = None
 		self._set_add(self._add)
+
+	def __hash__(self):
+		h = self.depth*127 + len(self)*29
+		if self.lo:
+			h += len(self.lo)*31 + len(self.hi)*37
+		if self.splitx:
+			h += int(self.splitx)*41
+		if self.splity:
+			h += int(self.splity)*43
+		return h
 
 
 class kazaamindextree(kazaamtree):
